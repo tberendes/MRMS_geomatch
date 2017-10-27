@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="jarfiles/netcdfAll-4.6.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/javadoc/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="jarfiles/slf4j-api-1.7.6.jar"/>
+	<classpathentry kind="lib" path="jarfiles/slf4j-simple-1.7.7.jar"/>
+	<classpathentry kind="lib" path="jarfiles/commons-math3-3.6.1-tools.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/MRMS/javadoc/commons-math3-3.6.1-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="jarfiles/commons-math3-3.6.1.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/MRMS/javadoc/commons-math3-3.6.1-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="jarfiles/jcommon-1.0.23.jar"/>
+	<classpathentry kind="lib" path="jarfiles/jfreechart-1.0.19-experimental.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="http://www.jfree.org/jfreechart/api/javadoc/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="jarfiles/jfreechart-1.0.19.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="http://www.jfree.org/jfreechart/api/javadoc/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="jarfiles/junit-4.11.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
