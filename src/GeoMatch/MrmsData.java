@@ -1,10 +1,27 @@
 package GeoMatch;
 
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Point;
+import java.awt.Transparency;
+import java.awt.color.ColorSpace;
+import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.ComponentColorModel;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferByte;
+import java.awt.image.Raster;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
 
 import com.javadocmd.simplelatlng.LatLng;
 import com.javadocmd.simplelatlng.LatLngTool;
@@ -12,6 +29,7 @@ import com.javadocmd.simplelatlng.LatLngTool.Bearing;
 import com.javadocmd.simplelatlng.util.LengthUnit;
 
 import Util.TempFile;
+import Util.colormap;
 
 public class MrmsData {
 	static int INT_TYPE=0;
@@ -21,7 +39,16 @@ public class MrmsData {
 	boolean isCenterLL=true;
 	double noDataValue=-999.0f;
 	int dataType=FLOAT_TYPE;
+	ByteBuffer binarySiteValues = null;
+	BoundingBox imageBounds = null;
 	
+	public BoundingBox getImageBounds() {
+		return imageBounds;
+	}
+	public ByteBuffer getBinarySiteValues() {
+		return binarySiteValues;
+	}
+
 	float [][] floatData;
 	int [][] intData;
 	// startLat and startLon is inconsistent in the data, assume same fixed domain and hardcode
@@ -132,6 +159,233 @@ public class MrmsData {
 			}
 		}
 	}
+	public int getNcols() {
+		return ncols;
+	}
+	public int getNrows() {
+		return nrows;
+	}
+	public float[][] getFloatData() {
+		return floatData;
+	}
+	public int[][] getIntData() {
+		return intData;
+	}
+	private static BufferedImage createRGBImage(byte[] bytes, int width, int height) {
+	    DataBufferByte buffer = new DataBufferByte(bytes, bytes.length);
+	    ColorModel cm = new ComponentColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), new int[]{8, 8, 8}, false, false, Transparency.OPAQUE, DataBuffer.TYPE_BYTE);
+	    return new BufferedImage(cm, Raster.createInterleavedRaster(buffer, width, height, width * 3, 3, new int[]{0, 1, 2}, null), false, null);
+	}
+	private static BufferedImage createGreyscaleImage(byte[] bytes, int width, int height) {
+	    DataBufferByte buffer = new DataBufferByte(bytes, bytes.length);
+	    ColorModel cm = new ComponentColorModel(ColorSpace.getInstance(ColorSpace.CS_GRAY), new int[]{8}, false, false, Transparency.OPAQUE, DataBuffer.TYPE_BYTE);
+	    return new BufferedImage(cm, Raster.createInterleavedRaster(buffer, width, height, width, 1,new int[]{0}, null), false, null);
+	}
+	public BufferedImage floatDataToImage(float min, float max, float centerlat, float centerlon, float siteRadiusKm, boolean colorFlag,boolean binaryDataFlag)
+	/*
+	 * creates grey scale image 0-255 between specified max/min values
+	 */
+	{
+		
+//		BufferedImage image = new BufferedImage(ncols, nrows, BufferedImage.TYPE_BYTE_GRAY);
+		
+		BoundingBox siteBounds = new BoundingBox(centerlat, centerlon, siteRadiusKm);	
+		int startPix = siteBounds.getStartPix();
+		int startLine= siteBounds.getStartLine();
+		int endPix = siteBounds.getEndPix();
+		int endLine= siteBounds.getEndLine();
+		
+		imageBounds = siteBounds;
+		int numLines = endLine - startLine + 1;
+		int numPix = endPix - startPix + 1;
+
+		byte [][] allLines;
+		if (colorFlag) {
+			allLines = new byte[numLines][numPix*3];
+		}
+		else {
+			allLines = new byte[numLines][numPix];
+		}
+		
+		
+		if (binaryDataFlag) {
+			binarySiteValues=ByteBuffer.allocate(numLines*numPix*Float.BYTES+5*Float.BYTES);
+			binarySiteValues.putFloat((float)numPix);		
+			binarySiteValues.putFloat((float)numLines);		
+			binarySiteValues.putFloat((float)getLat(startPix));
+			binarySiteValues.putFloat((float)getLon(startLine));
+			binarySiteValues.putFloat(cellSize);
+		}
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		for (int lineInd=0,ind1=startLine;ind1<=endLine;ind1++,lineInd++){
+			for (int pixInd=0,ind2=startPix;ind2<=endPix;ind2++,pixInd++){
+				float value = floatData[ind1][ind2];
+				if (binaryDataFlag) {
+					binarySiteValues.putFloat(value);
+				}
+				byte byteValue;
+				if (value<min) byteValue = 0;
+				else if (value>max) byteValue = (byte)255;
+				else byteValue=(byte) (255.0 * ( value - min) / (max - min));
+				if (colorFlag) {
+					int index=0xFF&byteValue;
+					allLines[lineInd][pixInd*3] = colormap.radarScale[index][0];
+					allLines[lineInd][pixInd*3+1] = colormap.radarScale[index][1];
+					allLines[lineInd][pixInd*3+2] = colormap.radarScale[index][2];
+				}
+				else {
+					allLines[lineInd][pixInd] = byteValue;
+				}
+			}
+//			// draw one line at a time into bufferedImage
+//			if (colorFlag)
+//				bos.write(oneLine, 0, numPix*3);
+//			else
+//				bos.write(oneLine, 0, numPix);
+		}
+		// write image, flip line order for top to bottom image rendering
+		for (int lineInd=0,ind1=startLine;ind1<=endLine;ind1++,lineInd++){
+			
+			// draw one line at a time into bufferedImage
+			if (colorFlag)
+				bos.write(allLines[numLines - 1 - lineInd], 0, numPix*3);
+			else
+				bos.write(allLines[numLines - 1 - lineInd], 0, numPix);;
+		}
+		byte[] pixels = bos.toByteArray();
+		
+		BufferedImage image;
+		if (colorFlag)
+			image = createRGBImage(pixels, numPix, numLines);
+		else 
+			image = createGreyscaleImage(pixels, numPix, numLines);
+				
+		return image;
+	}
+	public BufferedImage matchGPMToImage(float min, float max, float centerlat, float centerlon, float siteRadiusKm,ArrayList<LatLng> gpmLatLon, float fpRadiusKm,ArrayList<Float> sfcPrecipRate, boolean colorFlag,boolean binaryDataFlag)
+	/*
+	 * creates grey scale image 0-255 between specified max/min values
+	 */
+	{
+		
+//		BufferedImage image = new BufferedImage(ncols, nrows, BufferedImage.TYPE_BYTE_GRAY);
+
+		
+		BoundingBox siteBounds = new BoundingBox(centerlat, centerlon, siteRadiusKm);	
+		int startPix = siteBounds.getStartPix();
+		int startLine= siteBounds.getStartLine();
+		int endPix = siteBounds.getEndPix();
+		int endLine= siteBounds.getEndLine();
+		int numLines = endLine - startLine + 1;
+		int numPix = endPix - startPix + 1;
+		
+		imageBounds = siteBounds;
+		
+		float [][] binaryLines=null;
+		if (binaryDataFlag) {
+			binarySiteValues=ByteBuffer.allocate(numLines*numPix*Float.BYTES+5*Float.BYTES);
+			binarySiteValues.putFloat((float)numPix);		
+			binarySiteValues.putFloat((float)numLines);		
+			binarySiteValues.putFloat((float)getLat(startPix));
+			binarySiteValues.putFloat((float)getLon(startLine));
+			binarySiteValues.putFloat(cellSize);
+			binaryLines = new float[numLines][numPix];
+		}
+
+		byte [][] allLines;
+		if (colorFlag) {
+			allLines = new byte[numLines][numPix*3];
+		}
+		else {
+			allLines = new byte[numLines][numPix];
+		}
+		// create blank image
+		for (int ind1=0;ind1<numLines;ind1++){
+			for (int ind2=0;ind2<numPix;ind2++){
+				if (binaryDataFlag)
+					binaryLines[ind1][ind2] = -9999.0f;
+				if (colorFlag) {
+					allLines[ind1][ind2*3] = 0;
+					allLines[ind1][ind2*3+1] = 0;
+					allLines[ind1][ind2*3+2] = 0;
+				}
+				else
+					allLines[ind1][ind2] = 0;
+			}
+		}
+		// loop through GPM footprints and render footprint circles in allLines
+		int footprintIndex=0;
+		for (LatLng centerLoc:gpmLatLon) {
+			float lat=(float)centerLoc.getLatitude();
+			float lon=(float)centerLoc.getLongitude();
+			BoundingBox fpBounds = new BoundingBox(lat, lon, fpRadiusKm);	
+			int fpstartPix = fpBounds.getStartPix();
+			int fpstartLine= fpBounds.getStartLine();
+			int fpendPix = fpBounds.getEndPix();
+			int fpendLine= fpBounds.getEndLine();
+			float value = sfcPrecipRate.get(footprintIndex);
+			byte byteValue;
+			if (value<min) byteValue = 0;
+			else if (value>max) byteValue = (byte)255;
+			else byteValue=(byte) (255.0 * ( value - min) / (max - min));
+			
+			
+			for (int ind1=fpstartLine; ind1<=fpendLine;ind1++) {
+				if (ind1<startLine || ind1>endLine) continue;
+				for (int ind2=fpstartPix;ind2<=fpendPix;ind2++) {
+					if (ind2<startPix || ind2>endPix) continue;
+					// check against radius to eliminate corners of boxed lat/long region
+					// compute lat/lon of each "pixel"
+					double fplat = getLat(ind1);
+					double fplon = getLon(ind2);
+					if (LatLngTool.distance(centerLoc, new LatLng(fplat,fplon), LengthUnit.KILOMETER) < fpRadiusKm ) {
+						if (colorFlag) {
+							int index=0xFF&byteValue;
+							allLines[ind1 - startLine][(ind2 - startPix)*3] = colormap.radarScale[index][0];
+							allLines[ind1 - startLine][(ind2 - startPix)*3+1] = colormap.radarScale[index][1];
+							allLines[ind1 - startLine][(ind2 - startPix)*3+2] = colormap.radarScale[index][2];
+						}
+						else {
+							allLines[ind1 - startLine][ind2 - startPix] = byteValue;
+						}
+						if (binaryDataFlag)
+							binaryLines[ind1 - startLine][ind2 - startPix] = value;
+					}
+//					else {
+//						allLines[ind1 - startLine][ind2 - startPix] = (byte)255;
+//						
+//					}
+				}
+			}
+			footprintIndex++;
+		}
+		
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		// write image, flip line order for top to bottom image rendering
+		for (int lineInd=0,ind1=startLine;ind1<=endLine;ind1++,lineInd++){
+			// write out binary data to bytebuffer
+			if (binaryLines!=null) {
+				for (int pixInd=0,ind2=startPix;ind2<=endPix;ind2++,pixInd++){
+					binarySiteValues.putFloat(allLines[lineInd][pixInd]);					
+				}
+			}
+			// draw one line at a time into bufferedImage
+			if (colorFlag)
+				bos.write(allLines[numLines - 1 - lineInd], 0, numPix*3);
+			else
+				bos.write(allLines[numLines - 1 - lineInd], 0, numPix);;
+		}
+		
+		byte[] pixels = bos.toByteArray();
+
+		BufferedImage image;
+		if (colorFlag)
+			image = createRGBImage(pixels, numPix, numLines);
+		else 
+			image = createGreyscaleImage(pixels, numPix, numLines);
+
+		return image;
+	}
 	public float getFloatValue(int row, int col)
 	{
 		return floatData[row][col];
@@ -158,6 +412,11 @@ public class MrmsData {
 	{
 		int col = (int)((lon - startLon)/cellSize);
 		int row = (int)((lat - startLat)/cellSize);
+		// error check
+		if (row<0) row=0;
+		if (col<0) col=0;
+		if (row>=nrows) row= nrows-1;
+		if (col>=ncols) col=ncols-1;
 		return new Point(col,row);
 	}
 	public double getLat(int row) 
@@ -175,23 +434,31 @@ public class MrmsData {
 		Point centerMRMS=getGridCoords(footprintLoc.getLatitude(),footprintLoc.getLongitude());
 		double centerlat = getLat((int)centerMRMS.getY());
 		double centerlon = getLon((int)centerMRMS.getX());
-		LatLng centerLoc=new LatLng(centerlat, centerlon);
 		
-		// compute bounding box for a 2.6km radius (5.2km nadir resolution DPR footprint)
-//		LatLng llCorner = LatLngTool.travel(centerLoc, Bearing.SOUTH_WEST, radius,LengthUnit.KILOMETER);
-//		LatLng urCorner = LatLngTool.travel(centerLoc, Bearing.NORTH_EAST, radius,LengthUnit.KILOMETER);
-//		Point startPt = getGridCoords(llCorner.getLatitude(), llCorner.getLongitude());
-//		Point endPt = getGridCoords(urCorner.getLatitude(), urCorner.getLongitude());
-		LatLng up = LatLngTool.travel(centerLoc, Bearing.NORTH, radius,LengthUnit.KILOMETER);
-		LatLng down = LatLngTool.travel(centerLoc, Bearing.SOUTH, radius,LengthUnit.KILOMETER);
-		LatLng right = LatLngTool.travel(centerLoc, Bearing.EAST, radius,LengthUnit.KILOMETER);
-		LatLng left = LatLngTool.travel(centerLoc, Bearing.WEST, radius,LengthUnit.KILOMETER);
-		Point startPt = getGridCoords(down.getLatitude(), left.getLongitude());
-		Point endPt = getGridCoords(up.getLatitude(), right.getLongitude());
-		int startPix = (int)startPt.getX();
-		int startLine= (int)startPt.getY();
-		int endPix = (int)endPt.getX();
-		int endLine= (int)endPt.getY();
+		BoundingBox siteBounds = new BoundingBox((float)centerlat, (float)centerlon, (float)radius);	
+		int startPix = siteBounds.getStartPix();
+		int startLine= siteBounds.getStartLine();
+		int endPix = siteBounds.getEndPix();
+		int endLine= siteBounds.getEndLine();
+		LatLng centerLoc=new LatLng(centerlat, centerlon);
+//		
+//		// compute bounding box for a 2.6km radius (5.2km nadir resolution DPR footprint)
+////		LatLng llCorner = LatLngTool.travel(centerLoc, Bearing.SOUTH_WEST, radius,LengthUnit.KILOMETER);
+////		LatLng urCorner = LatLngTool.travel(centerLoc, Bearing.NORTH_EAST, radius,LengthUnit.KILOMETER);
+////		Point startPt = getGridCoords(llCorner.getLatitude(), llCorner.getLongitude());
+////		Point endPt = getGridCoords(urCorner.getLatitude(), urCorner.getLongitude());
+//		LatLng up = LatLngTool.travel(centerLoc, Bearing.NORTH, radius,LengthUnit.KILOMETER);
+//		LatLng down = LatLngTool.travel(centerLoc, Bearing.SOUTH, radius,LengthUnit.KILOMETER);
+//		LatLng right = LatLngTool.travel(centerLoc, Bearing.EAST, radius,LengthUnit.KILOMETER);
+//		LatLng left = LatLngTool.travel(centerLoc, Bearing.WEST, radius,LengthUnit.KILOMETER);
+//		Point startPt = getGridCoords(down.getLatitude(), left.getLongitude());
+//		Point endPt = getGridCoords(up.getLatitude(), right.getLongitude());
+//		int startPix = (int)startPt.getX();
+//		int startLine= (int)startPt.getY();
+//		int endPix = (int)endPt.getX();
+//		int endLine= (int)endPt.getY();
+		
+		
 		// loop through array from start to end
 		for (int ind1=0; ind1<=endLine-startLine;ind1++) {
 			for (int ind2=0;ind2<=endPix-startPix;ind2++) {
@@ -221,23 +488,30 @@ public class MrmsData {
 		Point centerMRMS=getGridCoords(footprintLoc.getLatitude(),footprintLoc.getLongitude());
 		double centerlat = getLat((int)centerMRMS.getY());
 		double centerlon = getLon((int)centerMRMS.getX());
+		
+		BoundingBox siteBounds = new BoundingBox((float)centerlat, (float)centerlon, (float)radius);	
+		int startPix = siteBounds.getStartPix();
+		int startLine= siteBounds.getStartLine();
+		int endPix = siteBounds.getEndPix();
+		int endLine= siteBounds.getEndLine();
 		LatLng centerLoc=new LatLng(centerlat, centerlon);
 
-		// compute bounding box for a 2.6km radius (5.2km nadir resolution DPR footprint)
-//		LatLng llCorner = LatLngTool.travel(centerLoc, Bearing.SOUTH_WEST, radius,LengthUnit.KILOMETER);
-//		LatLng urCorner = LatLngTool.travel(centerLoc, Bearing.NORTH_EAST, radius,LengthUnit.KILOMETER);
-//		Point startPt = getGridCoords(llCorner.getLatitude(), llCorner.getLongitude());
-//		Point endPt = getGridCoords(urCorner.getLatitude(), urCorner.getLongitude());
-		LatLng up = LatLngTool.travel(centerLoc, Bearing.NORTH, radius,LengthUnit.KILOMETER);
-		LatLng down = LatLngTool.travel(centerLoc, Bearing.SOUTH, radius,LengthUnit.KILOMETER);
-		LatLng right = LatLngTool.travel(centerLoc, Bearing.EAST, radius,LengthUnit.KILOMETER);
-		LatLng left = LatLngTool.travel(centerLoc, Bearing.WEST, radius,LengthUnit.KILOMETER);
-		Point startPt = getGridCoords(down.getLatitude(), left.getLongitude());
-		Point endPt = getGridCoords(up.getLatitude(), right.getLongitude());
-		int startPix = (int)startPt.getX();
-		int startLine= (int)startPt.getY();
-		int endPix = (int)endPt.getX();
-		int endLine= (int)endPt.getY();
+//		// compute bounding box for a 2.6km radius (5.2km nadir resolution DPR footprint)
+////		LatLng llCorner = LatLngTool.travel(centerLoc, Bearing.SOUTH_WEST, radius,LengthUnit.KILOMETER);
+////		LatLng urCorner = LatLngTool.travel(centerLoc, Bearing.NORTH_EAST, radius,LengthUnit.KILOMETER);
+////		Point startPt = getGridCoords(llCorner.getLatitude(), llCorner.getLongitude());
+////		Point endPt = getGridCoords(urCorner.getLatitude(), urCorner.getLongitude());
+//		LatLng up = LatLngTool.travel(centerLoc, Bearing.NORTH, radius,LengthUnit.KILOMETER);
+//		LatLng down = LatLngTool.travel(centerLoc, Bearing.SOUTH, radius,LengthUnit.KILOMETER);
+//		LatLng right = LatLngTool.travel(centerLoc, Bearing.EAST, radius,LengthUnit.KILOMETER);
+//		LatLng left = LatLngTool.travel(centerLoc, Bearing.WEST, radius,LengthUnit.KILOMETER);
+//		Point startPt = getGridCoords(down.getLatitude(), left.getLongitude());
+//		Point endPt = getGridCoords(up.getLatitude(), right.getLongitude());
+//		int startPix = (int)startPt.getX();
+//		int startLine= (int)startPt.getY();
+//		int endPix = (int)endPt.getX();
+//		int endLine= (int)endPt.getY();
+		
 		// loop through array from start to end
 //		int pixcnt=(endPix - startPix + 1);
 //		int linecnt=(endLine-startLine + 1);
@@ -272,4 +546,58 @@ public class MrmsData {
 		return values;
 	}
 		
+	public class BoundingBox
+	{
+		int startPix;
+		int startLine;
+		int endPix;
+		int endLine;
+		LatLng north,south,east,west;
+		public LatLng getNorth() {
+			return north;
+		}
+
+		public LatLng getSouth() {
+			return south;
+		}
+
+		public LatLng getEast() {
+			return east;
+		}
+
+		public LatLng getWest() {
+			return west;
+		}
+		
+		public int getStartPix() {
+			return startPix;
+		}
+
+		public int getStartLine() {
+			return startLine;
+		}
+
+		public int getEndPix() {
+			return endPix;
+		}
+
+		public int getEndLine() {
+			return endLine;
+		}		
+		public BoundingBox(float centerLat, float centerLon, float radiusKm) 
+		{
+			LatLng centerLoc=new LatLng(centerLat, centerLon);
+			// compute bounding box for a radius around a lat/lon location
+			north = LatLngTool.travel(centerLoc, Bearing.NORTH, radiusKm,LengthUnit.KILOMETER);
+			south = LatLngTool.travel(centerLoc, Bearing.SOUTH, radiusKm,LengthUnit.KILOMETER);
+			east = LatLngTool.travel(centerLoc, Bearing.EAST, radiusKm,LengthUnit.KILOMETER);
+			west = LatLngTool.travel(centerLoc, Bearing.WEST, radiusKm,LengthUnit.KILOMETER);
+			Point startPt = getGridCoords(south.getLatitude(), west.getLongitude());
+			Point endPt = getGridCoords(north.getLatitude(), east.getLongitude());
+			startPix = (int)startPt.getX();
+			startLine= (int)startPt.getY();
+			endPix = (int)endPt.getX();
+			endLine= (int)endPt.getY();
+		}
+	}
 }

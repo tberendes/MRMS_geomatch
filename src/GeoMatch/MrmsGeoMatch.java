@@ -1,14 +1,21 @@
 package GeoMatch;
 import java.awt.Point;
+import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import javax.imageio.ImageIO;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
@@ -17,6 +24,7 @@ import com.javadocmd.simplelatlng.LatLng;
 import com.javadocmd.simplelatlng.LatLngTool;
 import com.javadocmd.simplelatlng.util.LengthUnit;
 
+import GeoMatch.MrmsData.BoundingBox;
 import Util.TempFile;
 import ucar.ma2.Array;
 import ucar.ma2.ArrayFloat;
@@ -58,18 +66,18 @@ public class MrmsGeoMatch {
 		// TODO Auto-generated method stub
 
 		
-		if (args.length<3) {
-			System.out.println("Usage:  java -jar MrmsGeoMatch input_VN_directory output_VN_directory MRMS_root_directory ");
-			System.out.println("  Matches MRMS data with GPM VN matchup files and creates new netCDF files");
-			System.exit(-1);
-		}
-		String vnInputDir = args[0];
-		String vnOutputDir = args[1];
-		String mrmsPath = args[2];
-		
-//		String vnInputDir = "C:\\Users\\tberendes\\gpmgv\\input_dir";
-//		String vnOutputDir = "C:\\Users\\tberendes\\gpmgv\\output_dir";
-//		String mrmsPath = "C:\\Users\\tberendes\\gpmgv\\MRMS\\level2";
+//		if (args.length<3) {
+//			System.out.println("Usage:  java -jar MrmsGeoMatch input_VN_directory output_VN_directory MRMS_root_directory ");
+//			System.out.println("  Matches MRMS data with GPM VN matchup files and creates new netCDF files");
+//			System.exit(-1);
+//		}
+//		String vnInputDir = args[0];
+//		String vnOutputDir = args[1];
+//		String mrmsPath = args[2];
+		// testing only, remove these three lines and uncomment above block
+		String vnInputDir = "C:\\Users\\tberendes\\gpmgv\\input_dir";
+		String vnOutputDir = "C:\\Users\\tberendes\\gpmgv\\output_dir";
+		String mrmsPath = "C:\\Users\\tberendes\\gpmgv\\MRMS\\level2";
 
 		if (vnInputDir.equals(vnOutputDir)) {
 			System.out.println("Error: output directory must be different from input directory");
@@ -97,15 +105,19 @@ public class MrmsGeoMatch {
 		MrmsGeoMatch mrmsGeo = new MrmsGeoMatch(vnInputDir,vnOutputDir,mrmsPath);
 		
 
-		mrmsGeo.processDirectory();
+//		mrmsGeo.processDirectory();
+		// testing only, remove these three lines and uncomment above line
+		
+//		String vnInputFilename = "C:\\Users\\tberendes\\gpmgv\\GPM_matchups\\GRtoDPR.KHTX.160626.13215.ITE114.DPR.NS.1_21.15dbzGRDPR_newDm.nc.gz";
+//		String vnOutputFilename = "C:\\Users\\tberendes\\gpmgv\\GPM_matchups\\GRtoDPR.KHTX.160626.13215.ITE114.DPR.NS.1_21.15dbzGRDPR_newDm_mrms.nc";
+		String vnInputFilename = "C:\\Users\\tberendes\\gpmgv\\MRMS\\GRtoDPR.KDOX.140907.2977.V05A.DPR.NS.1_21.nc.gz";
+		String vnOutputFilename = "C:\\Users\\tberendes\\gpmgv\\MRMS\\GRtoDPR.KDOX.140907.2977.V05A.DPR.NS.1_21_mrms.nc.gz";
+		mrmsGeo.processFile(vnInputFilename, vnOutputFilename);
+
 		
 	}
 	void processDirectory()
-	{
-//		String vnInputFilename = "C:\\Users\\tberendes\\gpmgv\\GPM_matchups\\GRtoDPR.KHTX.160626.13215.ITE114.DPR.NS.1_21.15dbzGRDPR_newDm.nc.gz";
-//		String vnOutputFilename = "C:\\Users\\tberendes\\gpmgv\\GPM_matchups\\GRtoDPR.KHTX.160626.13215.ITE114.DPR.NS.1_21.15dbzGRDPR_newDm_mrms.nc";
-//		processFile(vnInputFilename, vnOutputFilename);
-		
+	{	
 		File dsFile = new File (vnInputDir);
     	File [] dirListing = dsFile.listFiles();
     	if (dirListing==null || dirListing.length==0) {  // no dates are processed
@@ -145,6 +157,8 @@ public class MrmsGeoMatch {
 		String filename;
 		TempFile temp=null;
 		Array dprLatitude=null, dprLongitude=null;
+		Array PrecipRateSurface=null, SurfPrecipTotRate=null;
+		Array PrecipRate=null;
 		Dimension fpdim=null;
 		Mrms mrms=null;
 		try {
@@ -200,6 +214,28 @@ public class MrmsGeoMatch {
 			}
 			dprLongitude = var.read();
 
+			// DPR precip rate (elev,fpdim)
+			var = mFptr.findVariable("PrecipRate");
+			if (var==null) {
+				System.err.println("cannot find variable PrecipRate");
+				throw new IOException();			
+			}
+			PrecipRate = var.read();
+			
+			// DPR near sfc precip rate (fpdim)
+			var = mFptr.findVariable("PrecipRateSurface");
+			if (var==null) {
+				System.err.println("cannot find variable PrecipRateSurface");
+				throw new IOException();			
+			}
+			PrecipRateSurface = var.read();
+			// DPRGMI near sfc, not present in DPR file (fpdim)
+			var = mFptr.findVariable("SurfPrecipTotRate");
+			if (var==null) {
+				System.err.println("cannot find variable SurfPrecipTotRate");
+				throw new IOException();			
+			}
+			SurfPrecipTotRate = var.read();
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -399,6 +435,18 @@ public class MrmsGeoMatch {
 						java.nio.file.Files.copy(java.nio.file.Paths.get(temp.getTempFilename()), java.nio.file.Paths.get(vnOutputFilename),java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 					}
 					System.out.println("Finished file " + vnInputFilename);
+					
+					// loop through DPR footprints
+					ArrayList<LatLng> gpmLatLon = new ArrayList<>();
+					ArrayList<Float> sfcPrecipRate = new ArrayList<>();
+					for (int ind1=0;ind1<fpdim.getLength();ind1++) {
+						gpmLatLon.add(new LatLng(dprLatitude.getDouble(ind1),dprLongitude.getDouble(ind1)));
+//						sfcPrecipRate.add(PrecipRate.getFloat(PrecipRate.getIndex().set(0,ind1)));
+						sfcPrecipRate.add(PrecipRateSurface.getFloat(ind1));
+//						sfcPrecipRate.add(SurfPrecipTotRate.getFloat(ind1));
+					}
+					outputSiteImagery(siteLat, siteLon, mrms, gpmLatLon, sfcPrecipRate, vnOutputFilename, "");
+
 				}
 				
 				temp.deleteTemp();				
@@ -430,6 +478,101 @@ public class MrmsGeoMatch {
 //			}
 		}
 		return maskMap;
+	}
+	void outputKMLFile(BoundingBox imageBounds,String imageFilePath, String xmlFilename)
+	{
+		String outString;
+		File f = new File(imageFilePath);
+		String imageFilename = f.getName();
+		
+		outString = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+		outString += "<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n";
+		outString += "  <Folder>\n";
+		outString += "    <name>GPM Validation Network</name>\n";
+		outString += "    <description></description>\n";
+		outString += "    <GroundOverlay>\n";
+		outString += "     <name>" + imageFilename + "</name>\n";
+		outString += "      <description>GPM Near Surface Rain Rate</description>\n";
+		outString += "      <Icon>\n";
+		outString += "       <href>" + imageFilename + "</href>\n";
+		outString += "      </Icon>\n";
+		outString += "      <LatLonBox>\n";
+		outString += "        <north>" + imageBounds.getNorth().getLatitude() + "</north>\n";
+		outString += "        <south>" + imageBounds.getSouth().getLatitude() + "</south>\n";
+		outString += "        <east>" + imageBounds.getEast().getLongitude() + "</east>\n";
+		outString += "        <west>" + imageBounds.getWest().getLongitude() + "</west>\n";
+		outString += "      </LatLonBox>\n";
+		outString += "    </GroundOverlay>\n";
+		outString += "  </Folder>\n";
+		outString += "</kml>\n";
+		
+		FileOutputStream fout;
+		try {
+			fout = new FileOutputStream(xmlFilename);
+			fout.write(outString.getBytes());
+			fout.close();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	void outputSiteImagery(float siteLat, float siteLon, Mrms mrms, ArrayList<LatLng> gpmLatLon, ArrayList<Float> sfcPrecipRate, String vnOutputFilename, String outputDirname) 
+	{
+		
+		BufferedImage mrmsimage;
+		FileOutputStream mrmsfout = null;
+		BufferedImage gpmimage;
+		FileOutputStream gpmfout = null;
+		FileOutputStream mrmsfoutBinary = null;
+		FileOutputStream gpmfoutBinary = null;
+		try {
+			mrmsimage = mrms.getPRECIPRATEdata().floatDataToImage(0.0f,60.0f, siteLat, siteLon, 125.0f,true,true);
+			mrmsfout = new FileOutputStream(vnOutputFilename + ".mrms.col" + ".png" );
+		    ImageIO.write(mrmsimage, "png", mrmsfout);
+			mrmsfout.close();
+			BoundingBox imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
+			outputKMLFile(imageBounds,vnOutputFilename + ".mrms.col" + ".png", vnOutputFilename + ".mrms.col" + ".kml");
+
+			ByteBuffer mrmsBinary = mrms.getPRECIPRATEdata().getBinarySiteValues();
+			mrmsfoutBinary = new FileOutputStream(vnOutputFilename + ".mrms" + ".bin" );	
+			mrmsfoutBinary.write(mrmsBinary.array());
+			mrmsfoutBinary.close();
+						
+			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 125.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,true,true);
+			gpmfout = new FileOutputStream(vnOutputFilename + ".gpm.col" + ".png" );
+		    ImageIO.write(gpmimage, "png", gpmfout);
+			gpmfout.close();
+			imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
+			outputKMLFile(imageBounds,vnOutputFilename + ".gpm.col" + ".png", vnOutputFilename + ".gpm.col" + ".kml");
+
+			ByteBuffer gpmBinary = mrms.getPRECIPRATEdata().getBinarySiteValues();
+			gpmfoutBinary = new FileOutputStream(vnOutputFilename + ".gpm" + ".bin" );	
+			gpmfoutBinary.write(gpmBinary.array());
+			gpmfoutBinary.close();	
+			
+			mrmsimage = mrms.getPRECIPRATEdata().floatDataToImage(0.0f,60.0f, siteLat, siteLon, 125.0f,false,false);
+			mrmsfout = new FileOutputStream(vnOutputFilename + ".mrms.bw" + ".png" );
+		    ImageIO.write(mrmsimage, "png", mrmsfout);
+			mrmsfout.close();
+			imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
+			outputKMLFile(imageBounds,vnOutputFilename + ".mrms.bw" + ".png", vnOutputFilename + ".mrms.bw" + ".kml");
+
+			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 125.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,false,false);
+			gpmfout = new FileOutputStream(vnOutputFilename + ".gpm.bw" + ".png" );
+		    ImageIO.write(gpmimage, "png", gpmfout);
+			gpmfout.close();
+			imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
+			outputKMLFile(imageBounds,vnOutputFilename + ".gpm.bw" + ".png", vnOutputFilename + ".gpm.bw" + ".kml");
+
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 	DescriptiveStatistics filteredStats(ArrayList<Float> value, ArrayList<Float> filter, double min, double max) 
 	{
