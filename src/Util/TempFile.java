@@ -16,6 +16,10 @@ public class TempFile {
 	public String getTempFilename() {
 		return tempFilename;
 	}
+	public File getFile()
+	{
+		return temp;
+	}
 	public TempFile(String fn, String tmpDir) throws IOException {
 		tempDir = tmpDir;
 		init(new File(fn));
@@ -25,6 +29,13 @@ public class TempFile {
 	}  
 	public TempFile(File f) throws IOException {
 		init(f);
+	}
+	public TempFile() throws IOException {
+		if (tempDir!=null)
+			temp = File.createTempFile("tempfile_", null, new File(tempDir));
+		else 
+			temp = File.createTempFile("tempfile_", null);
+		tempFilename = temp.getCanonicalFile().toString();
 	}
 	private void init(File f) throws IOException {
 		filename=f.getName();
@@ -38,6 +49,13 @@ public class TempFile {
 	public void unzip() throws IOException {
 		InputStream in = new FileInputStream(fullFilename);
 		OutputStream out = new FileOutputStream(temp);
+		unzip(in, out);
+	}
+	public void unzip(InputStream in) throws IOException {
+		OutputStream out = new FileOutputStream(temp);
+		unzip(in, out);
+	}
+	public void unzip(InputStream in, OutputStream out) throws IOException {
 		try {
 			in = new GZIPInputStream(in);
 			byte[] buffer = new byte[65536];
@@ -45,6 +63,8 @@ public class TempFile {
 			while ((numbytes = in.read(buffer)) != -1) {
 				out.write(buffer, 0, numbytes);
 			}
+		} catch (IOException e) {
+			System.out.println("IOException writing tempfile " + tempFilename);
 		} finally {
 			try { out.close(); } catch (Exception e) {
 				System.out.println("Error closing file " + tempFilename);

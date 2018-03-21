@@ -29,6 +29,7 @@ import Util.TempFile;
 import ucar.ma2.Array;
 import ucar.ma2.ArrayFloat;
 import ucar.ma2.ArrayInt;
+import ucar.ma2.ArrayShort;
 import ucar.ma2.ArrayString;
 import ucar.ma2.DataType;
 import ucar.ma2.Index;
@@ -281,7 +282,7 @@ public class MrmsGeoMatch {
 			precipMeanHighVar.addAttribute(new Attribute("description", "MRMS average precip rate with RQI >= .9"));
 			Variable precipMeanVeryHighVar = mFptr.addVariable(null, "PrecipMeanVeryHigh", DataType.FLOAT, "fpdim");
 			precipMeanVeryHighVar.addAttribute(new Attribute("units", "mm/hr"));
-			precipMeanVeryHighVar.addAttribute(new Attribute("description", "MRMS average precip rate with RQI >= .99"));
+			precipMeanVeryHighVar.addAttribute(new Attribute("description", "MRMS average precip rate with RQI >= .95"));
 
 			Variable guageRatioMeanLowVar = mFptr.addVariable(null, "GuageRatioMeanLow", DataType.FLOAT, "fpdim");
 			guageRatioMeanLowVar.addAttribute(new Attribute("units", "mm/hr"));
@@ -294,11 +295,26 @@ public class MrmsGeoMatch {
 			guageRatioMeanHighVar.addAttribute(new Attribute("description", "MRMS average guageRatio rate with with RQI >= .9"));
 			Variable guageRatioMeanVeryHighVar = mFptr.addVariable(null, "GuageRatioMeanVeryHigh", DataType.FLOAT, "fpdim");
 			guageRatioMeanVeryHighVar.addAttribute(new Attribute("units", "mm/hr"));
-			guageRatioMeanVeryHighVar.addAttribute(new Attribute("description", "MRMS average guageRatio rate with RQI >= .99"));
+			guageRatioMeanVeryHighVar.addAttribute(new Attribute("description", "MRMS average guageRatio rate with RQI >= .95"));
 
-		    List<Dimension> dims = new ArrayList<Dimension>();
+			// add new variables for RQI percentage of MRMS points to the temporary file
+			Variable rqiPercentLowVar = mFptr.addVariable(null, "RqiPercentLow", DataType.FLOAT, "fpdim");
+			rqiPercentLowVar.addAttribute(new Attribute("description", "Percent of MRMS grid points with RQI >= .5"));
+			Variable rqiPercentMedVar = mFptr.addVariable(null, "RqiPercentMed", DataType.FLOAT, "fpdim");
+			rqiPercentMedVar.addAttribute(new Attribute("description", "Percent of MRMS grid points with RQI >= .75"));
+			Variable rqiPercentHighVar = mFptr.addVariable(null, "RqiPercentHigh", DataType.FLOAT, "fpdim");
+			rqiPercentHighVar.addAttribute(new Attribute("description", "Percent of MRMS grid points with RQI >= .9"));
+			Variable rqiPercentVeryHighVar = mFptr.addVariable(null, "RqiPercentVeryHigh", DataType.FLOAT, "fpdim");
+			rqiPercentVeryHighVar.addAttribute(new Attribute("description", "Percent of MRMS grid points with RQI >= .95"));
+			
+			List<Dimension> dims = new ArrayList<Dimension>();
 		    dims.add(fpdim);
 		    dims.add(mrmsMaskDim);
+		    
+		    // add scalar varialble flag have_MRMS for presence of mrms data, use empty string for dimensions
+		    Variable mrmsFlagVar = mFptr.addVariable(null, "have_MRMS", DataType.SHORT, "");
+		    mrmsFlagVar.addAttribute(new Attribute("long_name", "Data exists for MRMS rain rates"));
+		    mrmsFlagVar.addAttribute(new Attribute("_FillValue", (short)0));
 
 		    Variable maskLowVar = mFptr.addVariable(null, "MaskLow", DataType.FLOAT, dims);
 			maskLowVar.addAttribute(new Attribute("units", "none"));
@@ -311,7 +327,7 @@ public class MrmsGeoMatch {
 			maskHighVar.addAttribute(new Attribute("description", "MRMS categories RQI with RQI >= .9"));
 			Variable maskVeryHighVar = mFptr.addVariable(null, "MaskVeryHigh", DataType.FLOAT, dims);
 			maskVeryHighVar.addAttribute(new Attribute("units", "none"));
-			maskVeryHighVar.addAttribute(new Attribute("description", "MRMS categories with RQI >= .99"));
+			maskVeryHighVar.addAttribute(new Attribute("description", "MRMS categories with RQI >= .95"));
 
 		
 	    	// leave define mode 
@@ -336,6 +352,12 @@ public class MrmsGeoMatch {
 			ArrayInt maskHighArr = new ArrayInt.D2(shape[0], shape[1]);
 			ArrayInt maskVeryHighArr = new ArrayInt.D2(shape[0], shape[1]);
 			
+			// allocate arrays for MRMS RQI percent 
+			ArrayFloat rqiPercentLowArr = new ArrayFloat.D1(fpdim.getLength());
+			ArrayFloat rqiPercentMedArr = new ArrayFloat.D1(fpdim.getLength());
+			ArrayFloat rqiPercentHighArr = new ArrayFloat.D1(fpdim.getLength());
+			ArrayFloat rqiPercentVeryHighArr = new ArrayFloat.D1(fpdim.getLength());
+
 			// loop through DPR footprints
 			for (int ind1=0;ind1<fpdim.getLength();ind1++) {
 				LatLng latlon = new LatLng(dprLatitude.getDouble(ind1),dprLongitude.getDouble(ind1));
@@ -349,51 +371,64 @@ public class MrmsGeoMatch {
 				ArrayList<Integer> MASKArray = mrms.getMASKdata().getSiteRadiusValuesInt(latlon, DPR_FOOTPRINT/2.0);
 			// define four RQI bins 0-.5, .51-.75, .76-.99, 1.0
 				
+				
 				DescriptiveStatistics precipLow=filteredStats(PRECIPArray,RQIArray,0.5,100.0);
 				DescriptiveStatistics precipMed=filteredStats(PRECIPArray,RQIArray,0.75,100.0);
 				DescriptiveStatistics precipHigh=filteredStats(PRECIPArray,RQIArray,0.9,100.0);
-				DescriptiveStatistics precipVeryHigh=filteredStats(PRECIPArray,RQIArray,0.99,100);
+				DescriptiveStatistics precipVeryHigh=filteredStats(PRECIPArray,RQIArray,0.95,100);
+				
+				// set up RQIPercentLow, med, high, veryhigh
+				float rqiPercentLow=percentAbove(RQIArray,0.5,100.0);
+				float rqiPercentMed=percentAbove(RQIArray,0.75,100.0);
+				float rqiPercentHigh=percentAbove(RQIArray,0.90,100.0);
+				float rqiPercentVeryHigh=percentAbove(RQIArray,0.95,100.0);
+				
+				rqiPercentLowArr.setFloat(rqiPercentLowArr.getIndex().set(ind1),rqiPercentLow);
+				rqiPercentMedArr.setFloat(rqiPercentMedArr.getIndex().set(ind1),rqiPercentMed);
+				rqiPercentHighArr.setFloat(rqiPercentHighArr.getIndex().set(ind1),rqiPercentHigh);
+				rqiPercentVeryHighArr.setFloat(rqiPercentVeryHighArr.getIndex().set(ind1),rqiPercentVeryHigh);
 				
 				// compute mean, precip rate, HCF (gauge ratios)
 				DescriptiveStatistics guageRatioLow=filteredStats(HCFArray,RQIArray,0.5,100.0);
 				DescriptiveStatistics guageRatioMed=filteredStats(HCFArray,RQIArray,0.75,100.0);
 				DescriptiveStatistics guageRatioHigh=filteredStats(HCFArray,RQIArray,0.9,100.0);
-				DescriptiveStatistics guageRatioVeryHigh=filteredStats(HCFArray,RQIArray,0.99,100.0);
+				DescriptiveStatistics guageRatioVeryHigh=filteredStats(HCFArray,RQIArray,0.95,100.0);
 				
 				// compute histogram of mask values
 				Map<Integer, Integer> maskMapLow = maskHistogram(MASKArray,RQIArray,0.5,100.0);
 				Map<Integer, Integer> maskMapMed=maskHistogram(MASKArray,RQIArray,0.75,100.0);
 				Map<Integer, Integer> maskMapHigh=maskHistogram(MASKArray,RQIArray,0.9,100.0);
-				Map<Integer, Integer> maskMapVeryHigh=maskHistogram(MASKArray,RQIArray,0.99,100.0);
+				Map<Integer, Integer> maskMapVeryHigh=maskHistogram(MASKArray,RQIArray,0.95,100.0);
 				
 				Set<Integer> keyset = maskMapLow.keySet();
 				int ind2=0;
-				Index index;
 
 				for (Integer key:keyset){
-					index=maskLowArr.getIndex();
-					maskLowArr.setInt(index.set(ind1,ind2), maskMapLow.get(key));
-					maskMedArr.setInt(index.set(ind1,ind2), maskMapMed.get(key));
-					maskHighArr.setInt(index.set(ind1,ind2), maskMapHigh.get(key));
-					maskVeryHighArr.setInt(index.set(ind1,ind2), maskMapVeryHigh.get(key));
+					maskLowArr.setInt(maskLowArr.getIndex().set(ind1,ind2), maskMapLow.get(key));
+					maskMedArr.setInt(maskMedArr.getIndex().set(ind1,ind2), maskMapMed.get(key));
+					maskHighArr.setInt(maskHighArr.getIndex().set(ind1,ind2), maskMapHigh.get(key));
+					maskVeryHighArr.setInt(maskVeryHighArr.getIndex().set(ind1,ind2), maskMapVeryHigh.get(key));
 					ind2++;
 				}
 				
-				index=precipMeanLowArr.getIndex();
-
-				precipMeanLowArr.setFloat(index.set(ind1), precipLow==null?-999.0f:(float)precipLow.getMean());
-				precipMeanMedArr.setFloat(index.set(ind1), precipMed==null?-999.0f:(float)precipMed.getMean());
-				precipMeanHighArr.setFloat(index.set(ind1), precipHigh==null?-999.0f:(float)precipHigh.getMean());
-				precipMeanVeryHighArr.setFloat(index.set(ind1), precipVeryHigh==null?-999.0f:(float)precipVeryHigh.getMean());
+				precipMeanLowArr.setFloat(precipMeanLowArr.getIndex().set(ind1), precipLow==null?-999.0f:(float)precipLow.getMean());
+				precipMeanMedArr.setFloat(precipMeanMedArr.getIndex().set(ind1), precipMed==null?-999.0f:(float)precipMed.getMean());
+				precipMeanHighArr.setFloat(precipMeanHighArr.getIndex().set(ind1), precipHigh==null?-999.0f:(float)precipHigh.getMean());
+				precipMeanVeryHighArr.setFloat(precipMeanVeryHighArr.getIndex().set(ind1), precipVeryHigh==null?-999.0f:(float)precipVeryHigh.getMean());
 								
-				guageRatioMeanLowArr.setFloat(index.set(ind1), guageRatioLow==null?-999.0f:(float)guageRatioLow.getMean());
-				guageRatioMeanMedArr.setFloat(index.set(ind1), guageRatioMed==null?-999.0f:(float)guageRatioMed.getMean());
-				guageRatioMeanHighArr.setFloat(index.set(ind1), guageRatioHigh==null?-999.0f:(float)guageRatioHigh.getMean());
-				guageRatioMeanVeryHighArr.setFloat(index.set(ind1), guageRatioVeryHigh==null?-999.0f:(float)guageRatioVeryHigh.getMean());
+				guageRatioMeanLowArr.setFloat(guageRatioMeanLowArr.getIndex().set(ind1), guageRatioLow==null?-999.0f:(float)guageRatioLow.getMean());
+				guageRatioMeanMedArr.setFloat(guageRatioMeanMedArr.getIndex(), guageRatioMed==null?-999.0f:(float)guageRatioMed.getMean());
+				guageRatioMeanHighArr.setFloat(guageRatioMeanHighArr.getIndex(), guageRatioHigh==null?-999.0f:(float)guageRatioHigh.getMean());
+				guageRatioMeanVeryHighArr.setFloat(guageRatioMeanVeryHighArr.getIndex(), guageRatioVeryHigh==null?-999.0f:(float)guageRatioVeryHigh.getMean());
 			
 				
 			}
+			// fake an array for writing out scalar data
+			short mrmsPresent = 1;
+			ArrayShort.D0 scalarData = new ArrayShort.D0();
+			scalarData.set(mrmsPresent);
 			// write vars
+			mFptr.write(mrmsFlagVar, scalarData);
 			mFptr.write(precipMeanLowVar, precipMeanLowArr);
 			mFptr.write(precipMeanMedVar, precipMeanMedArr);
 			mFptr.write(precipMeanHighVar, precipMeanHighArr);
@@ -409,6 +444,11 @@ public class MrmsGeoMatch {
 			mFptr.write(maskHighVar, maskHighArr);
 			mFptr.write(maskVeryHighVar, maskVeryHighArr);
 
+			mFptr.write(rqiPercentLowVar, rqiPercentLowArr);
+			mFptr.write(rqiPercentMedVar, rqiPercentMedArr);
+			mFptr.write(rqiPercentHighVar, rqiPercentHighArr);
+			mFptr.write(rqiPercentVeryHighVar, rqiPercentVeryHighArr);
+			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			if (mrms==null) {
@@ -573,6 +613,21 @@ public class MrmsGeoMatch {
 			e.printStackTrace();
 		}
 
+	}
+	float percentAbove(ArrayList<Float> filter, double min, double max)
+	{
+		if (filter.size()==0) {
+//			System.out.println("empty arraylist");
+			return 0.0f;
+		}
+		int cnt=0;
+		for (int ind1=0;ind1<filter.size();ind1++){
+			if (filter.get(ind1)>=min&&filter.get(ind1)<max) {
+				cnt++;
+			}
+		}
+		return (100.0f*((float)cnt/(float)filter.size()));
+		
 	}
 	DescriptiveStatistics filteredStats(ArrayList<Float> value, ArrayList<Float> filter, double min, double max) 
 	{
