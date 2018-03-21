@@ -41,6 +41,7 @@ import ucar.nc2.Variable;
 
 public class MrmsGeoMatch {
 
+	static boolean TEST_MODE=false;
 	static int [] HISTOGRAM_INDICES = {-1,0,1,2,3,4,6,7,91,96,10};
 	static String [] HISTOGRAM_CODES = {"missing","no precip", "warm stratiform rain"
 			,"warm stratiform rain at ground, radar data in or above melting layer"
@@ -66,19 +67,26 @@ public class MrmsGeoMatch {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
+		String vnInputDir;
+		String vnOutputDir;
+		String mrmsPath;
 		
-//		if (args.length<3) {
-//			System.out.println("Usage:  java -jar MrmsGeoMatch input_VN_directory output_VN_directory MRMS_root_directory ");
-//			System.out.println("  Matches MRMS data with GPM VN matchup files and creates new netCDF files");
-//			System.exit(-1);
-//		}
-//		String vnInputDir = args[0];
-//		String vnOutputDir = args[1];
-//		String mrmsPath = args[2];
-		// testing only, remove these three lines and uncomment above block
-		String vnInputDir = "C:\\Users\\tberendes\\gpmgv\\input_dir";
-		String vnOutputDir = "C:\\Users\\tberendes\\gpmgv\\output_dir";
-		String mrmsPath = "C:\\Users\\tberendes\\gpmgv\\MRMS\\level2";
+		if (!TEST_MODE) {
+			if (args.length<3) {
+				System.out.println("Usage:  java -jar MrmsGeoMatch input_VN_directory output_VN_directory MRMS_root_directory ");
+				System.out.println("  Matches MRMS data with GPM VN matchup files and creates new netCDF files");
+				System.exit(-1);
+			}
+			vnInputDir = args[0];
+			vnOutputDir = args[1];
+			mrmsPath = args[2];
+		}
+		else {
+			// testing only, remove these three lines and uncomment above block
+			vnInputDir = "C:\\Users\\tberendes\\gpmgv\\input_dir";
+			vnOutputDir = "C:\\Users\\tberendes\\gpmgv\\output_dir";
+			mrmsPath = "C:\\Users\\tberendes\\gpmgv\\MRMS\\level2";
+		}
 
 		if (vnInputDir.equals(vnOutputDir)) {
 			System.out.println("Error: output directory must be different from input directory");
@@ -105,16 +113,19 @@ public class MrmsGeoMatch {
 		
 		MrmsGeoMatch mrmsGeo = new MrmsGeoMatch(vnInputDir,vnOutputDir,mrmsPath);
 		
-
-//		mrmsGeo.processDirectory();
+ 
+		if (!TEST_MODE) {
+			mrmsGeo.processDirectory();
+		}
+		else {
 		// testing only, remove these three lines and uncomment above line
 		
-//		String vnInputFilename = "C:\\Users\\tberendes\\gpmgv\\GPM_matchups\\GRtoDPR.KHTX.160626.13215.ITE114.DPR.NS.1_21.15dbzGRDPR_newDm.nc.gz";
-//		String vnOutputFilename = "C:\\Users\\tberendes\\gpmgv\\GPM_matchups\\GRtoDPR.KHTX.160626.13215.ITE114.DPR.NS.1_21.15dbzGRDPR_newDm_mrms.nc";
-		String vnInputFilename = "C:\\Users\\tberendes\\gpmgv\\MRMS\\GRtoDPR.KDOX.140907.2977.V05A.DPR.NS.1_21.nc.gz";
-		String vnOutputFilename = "C:\\Users\\tberendes\\gpmgv\\MRMS\\GRtoDPR.KDOX.140907.2977.V05A.DPR.NS.1_21_mrms.nc.gz";
-		mrmsGeo.processFile(vnInputFilename, vnOutputFilename);
-
+	//		String vnInputFilename = "C:\\Users\\tberendes\\gpmgv\\GPM_matchups\\GRtoDPR.KHTX.160626.13215.ITE114.DPR.NS.1_21.15dbzGRDPR_newDm.nc.gz";
+	//		String vnOutputFilename = "C:\\Users\\tberendes\\gpmgv\\GPM_matchups\\GRtoDPR.KHTX.160626.13215.ITE114.DPR.NS.1_21.15dbzGRDPR_newDm_mrms.nc";
+			String vnInputFilename = "C:\\Users\\tberendes\\gpmgv\\MRMS\\GRtoDPR.KDOX.140907.2977.V05A.DPR.NS.1_21.nc.gz";
+			String vnOutputFilename = "C:\\Users\\tberendes\\gpmgv\\MRMS\\GRtoDPR.KDOX.140907.2977.V05A.DPR.NS.1_21_mrms.nc.gz";
+			mrmsGeo.processFile(vnInputFilename, vnOutputFilename);
+		}
 		
 	}
 	void processDirectory()
