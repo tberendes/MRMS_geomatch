@@ -366,7 +366,7 @@ public class MrmsData {
 			// write out binary data to bytebuffer
 			if (binaryLines!=null) {
 				for (int pixInd=0,ind2=startPix;ind2<=endPix;ind2++,pixInd++){
-					binarySiteValues.putFloat(allLines[lineInd][pixInd]);					
+					binarySiteValues.putFloat(binaryLines[lineInd][pixInd]);					
 				}
 			}
 			// draw one line at a time into bufferedImage
