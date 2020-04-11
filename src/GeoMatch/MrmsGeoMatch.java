@@ -153,7 +153,15 @@ public class MrmsGeoMatch {
     			if (filename.endsWith(".nc.gz") || filename.endsWith(".nc")) {
     				String vnInputFilename = vnInputDir + File.separator + filename;
     				String vnOutputFilename = vnOutputDir + File.separator + filename;
-    				processFile(vnInputFilename, vnOutputFilename);
+    				
+    				File outfile = new File (vnOutputFilename);
+    				if (outfile.exists()&&outfile.isFile()) {
+    					System.out.println("output file " + vnOutputFilename + " already exists, skipping file...");
+    					continue;
+    				}
+    				else {
+    					processFile(vnInputFilename, vnOutputFilename);
+    				}
     			}
     		}
     	}
