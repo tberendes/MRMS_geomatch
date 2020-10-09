@@ -91,7 +91,7 @@ public class Mrms {
 	{
 		if (sitelat<MIN_LAT || sitelat>MAX_LAT || sitelon<MIN_LON || sitelon>MAX_LON) {
 			// set error condition and return
-			throw new Exception("Error: lat/lon not within CONUS");
+			throw new Exception("Notice: lat/lon not within CONUS");
 		}
 		if (rootDirectory==null) {
  			throw new Exception("Error: null root directory");	

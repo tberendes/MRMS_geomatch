@@ -70,16 +70,20 @@ public class MrmsGeoMatch {
 		String vnInputDir;
 		String vnOutputDir;
 		String mrmsPath;
+		boolean overwriteFlag = false;
 		
 		if (!TEST_MODE) {
 			if (args.length<3) {
-				System.out.println("Usage:  java -jar MrmsGeoMatch input_VN_directory output_VN_directory MRMS_root_directory ");
+				System.out.println("Usage:  java -jar MrmsGeoMatch input_VN_directory output_VN_directory MRMS_root_directory <overwrite_if_param_present>");
 				System.out.println("  Matches MRMS data with GPM VN matchup files and creates new netCDF files");
 				System.exit(-1);
 			}
 			vnInputDir = args[0];
 			vnOutputDir = args[1];
 			mrmsPath = args[2];
+			if (args.length == 4) {
+				overwriteFlag = true;
+			}
 		}
 		else {
 			// testing only, remove these three lines and uncomment above block
@@ -115,7 +119,7 @@ public class MrmsGeoMatch {
 		
  
 		if (!TEST_MODE) {
-			mrmsGeo.processDirectory();
+			mrmsGeo.processDirectory(overwriteFlag);
 		}
 		else {
 		// testing only, remove these three lines and uncomment above line
@@ -128,7 +132,7 @@ public class MrmsGeoMatch {
 		}
 		
 	}
-	void processDirectory()
+	void processDirectory(boolean overwriteFlag)
 	{	
 		File dsFile = new File (vnInputDir);
     	File [] dirListing = dsFile.listFiles();
@@ -154,14 +158,21 @@ public class MrmsGeoMatch {
     				String vnInputFilename = vnInputDir + File.separator + filename;
     				String vnOutputFilename = vnOutputDir + File.separator + filename;
     				
-    				File outfile = new File (vnOutputFilename);
-    				if (outfile.exists()&&outfile.isFile()) {
-    					System.out.println("output file " + vnOutputFilename + " already exists, skipping file...");
-    					continue;
-    				}
-    				else {
+					// check to see if file exists, and only process if it doesn't
+					File vnfile = new File (vnOutputFilename);
+					if (vnfile.exists()) {
+	    				if (overwriteFlag) {
+    						System.out.println("file " + vnOutputFilename + " exists, overwriting...");	    					
+	    					processFile(vnInputFilename, vnOutputFilename);
+	    				}
+	    				else {
+    						System.out.println("file " + vnOutputFilename + " exists, skipping...");	    					
+	    				}
+					}
+					else {
     					processFile(vnInputFilename, vnOutputFilename);
-    				}
+						
+					}
     			}
     		}
     	}
@@ -589,7 +600,8 @@ public class MrmsGeoMatch {
 		FileOutputStream mrmsfoutBinary = null;
 		FileOutputStream gpmfoutBinary = null;
 		try {
-			mrmsimage = mrms.getPRECIPRATEdata().floatDataToImage(0.0f,60.0f, siteLat, siteLon, 125.0f,true,true);
+			// originally had site radius of 125km, changed to 175 to make image size > 256 for deep learning (allows crop to 256)
+			mrmsimage = mrms.getPRECIPRATEdata().floatDataToImage(0.0f,60.0f, siteLat, siteLon, 175.0f,true,true);
 			mrmsfout = new FileOutputStream(vnOutputFilename + ".mrms.col" + ".png" );
 		    ImageIO.write(mrmsimage, "png", mrmsfout);
 			mrmsfout.close();
@@ -601,7 +613,7 @@ public class MrmsGeoMatch {
 			mrmsfoutBinary.write(mrmsBinary.array());
 			mrmsfoutBinary.close();
 						
-			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 125.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,true,true);
+			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 175.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,true,true);
 			gpmfout = new FileOutputStream(vnOutputFilename + ".gpm.col" + ".png" );
 		    ImageIO.write(gpmimage, "png", gpmfout);
 			gpmfout.close();
@@ -613,14 +625,14 @@ public class MrmsGeoMatch {
 			gpmfoutBinary.write(gpmBinary.array());
 			gpmfoutBinary.close();	
 			
-			mrmsimage = mrms.getPRECIPRATEdata().floatDataToImage(0.0f,60.0f, siteLat, siteLon, 125.0f,false,false);
+			mrmsimage = mrms.getPRECIPRATEdata().floatDataToImage(0.0f,60.0f, siteLat, siteLon, 175.0f,false,false);
 			mrmsfout = new FileOutputStream(vnOutputFilename + ".mrms.bw" + ".png" );
 		    ImageIO.write(mrmsimage, "png", mrmsfout);
 			mrmsfout.close();
 			imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
 			outputKMLFile(imageBounds,vnOutputFilename + ".mrms.bw" + ".png", vnOutputFilename + ".mrms.bw" + ".kml");
 
-			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 125.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,false,false);
+			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 175.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,false,false);
 			gpmfout = new FileOutputStream(vnOutputFilename + ".gpm.bw" + ".png" );
 		    ImageIO.write(gpmimage, "png", gpmfout);
 			gpmfout.close();
