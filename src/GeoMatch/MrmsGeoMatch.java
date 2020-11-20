@@ -54,11 +54,13 @@ public class MrmsGeoMatch {
 	String vnInputDir;
 	String vnOutputDir;
 	String mrmsPath;
-	public MrmsGeoMatch(String InputDir, String OutputDir, String mrmsPath)
+	String tmpPath=null;
+	public MrmsGeoMatch(String InputDir, String OutputDir, String mrmsPath, String tmpPath)
 	{
 		this.mrmsPath = mrmsPath;
 		this.vnInputDir = InputDir;
 		this.vnOutputDir = OutputDir;
+		this.tmpPath = tmpPath;
     	// initialize histogram labels
     	for (int ind1=0;ind1<HISTOGRAM_INDICES.length;ind1++)
     		maskLabels.put(HISTOGRAM_INDICES[ind1], HISTOGRAM_CODES[ind1]);
@@ -70,19 +72,40 @@ public class MrmsGeoMatch {
 		String vnInputDir;
 		String vnOutputDir;
 		String mrmsPath;
+		String tmpPath=null;
 		boolean overwriteFlag = false;
 		
 		if (!TEST_MODE) {
 			if (args.length<3) {
-				System.out.println("Usage:  java -jar MrmsGeoMatch input_VN_directory output_VN_directory MRMS_root_directory <overwrite_if_param_present>");
+				System.out.println("Usage:  java -jar MrmsGeoMatch input_VN_directory output_VN_directory MRMS_root_directory <overwrite=true/false> <tmp=/tmpdir>");
 				System.out.println("  Matches MRMS data with GPM VN matchup files and creates new netCDF files");
 				System.exit(-1);
 			}
 			vnInputDir = args[0];
 			vnOutputDir = args[1];
 			mrmsPath = args[2];
-			if (args.length == 4) {
-				overwriteFlag = true;
+			
+//			if (args.length == 4) {
+//				overwriteFlag = true;
+//			}
+			if (args.length >= 4) {
+				// check for overwrite=true/false and tmp=/tmpdir
+				for (int ind1=3;ind1<args.length;ind1++) {
+					if (args[ind1].toLowerCase().contains("tmp=")) {
+						tmpPath=args[ind1].split("=")[1];
+						System.out.println("setting tmp dir to "+tmpPath);
+					}
+					if (args[ind1].toLowerCase().contains("overwrite=")) {
+						if (args[ind1].split("=")[1].equalsIgnoreCase("true")) {
+							overwriteFlag = true;							
+							System.out.println("overwriting existing output files ");
+						}
+						else {
+							overwriteFlag = false;
+							System.out.println("existing output files will be skipped ");
+						}
+					}
+				}
 			}
 		}
 		else {
@@ -115,7 +138,7 @@ public class MrmsGeoMatch {
 			System.exit(-1);
 		}
 		
-		MrmsGeoMatch mrmsGeo = new MrmsGeoMatch(vnInputDir,vnOutputDir,mrmsPath);
+		MrmsGeoMatch mrmsGeo = new MrmsGeoMatch(vnInputDir,vnOutputDir,mrmsPath,tmpPath);
 		
  
 		if (!TEST_MODE) {
@@ -193,7 +216,8 @@ public class MrmsGeoMatch {
 		Dimension fpdim=null;
 		Mrms mrms=null;
 		try {
-			temp = new TempFile(vnInputFilename);
+			System.out.println("processing file "+vnInputFilename);
+			temp = new TempFile(vnInputFilename,tmpPath);
 			filename = temp.getTempFilename();
 			if (vnInputFilename.endsWith(".gz")) {
 //				System.out.println("temporary file: "+ filename);
@@ -211,7 +235,7 @@ public class MrmsGeoMatch {
 			}
 			int[] shape = var.getShape(); // array dimensions
 			gpmTime = var.readScalarString();
-			System.out.println("gpmTime: " + gpmTime);
+//			System.out.println("gpmTime: " + gpmTime);
 //			Array arr = var.read();
 			//ByteBuffer buff = arr.getDataAsByteBuffer();
 
@@ -222,14 +246,14 @@ public class MrmsGeoMatch {
 				throw new IOException();			
 			}
 			siteLat = var.readScalarFloat();
-			System.out.println("site_lat: " + siteLat);
+//			System.out.println("site_lat: " + siteLat);
 			var = mFptr.findVariable("site_lon");
 			if (var==null) {
 				System.err.println("cannot find variable site_lon");
 				throw new IOException();			
 			}
 			siteLon = var.readScalarFloat();
-			System.out.println("site_lat: " + siteLon);
+//			System.out.println("site_lat: " + siteLon);
 
 			var = mFptr.findVariable("DPRlatitude");
 			if (var==null) {
@@ -274,7 +298,7 @@ public class MrmsGeoMatch {
 		}
 		
 		try {
-			mrms = new Mrms(gpmTime, mrmsPath, siteLat, siteLon);
+			mrms = new Mrms(gpmTime, mrmsPath, siteLat, siteLon, tmpPath);
 	    	
 	    	// enter define mode 
 			mFptr.setRedefineMode(true);

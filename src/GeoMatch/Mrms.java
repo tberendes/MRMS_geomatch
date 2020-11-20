@@ -87,7 +87,7 @@ public class Mrms {
 		return new DateUtil(dateStr);
 
 	}
-	public Mrms(String time, String rootDirectory, float sitelat, float sitelon) throws Exception
+	public Mrms(String time, String rootDirectory, float sitelat, float sitelon, String tmpDir) throws Exception
 	{
 		if (sitelat<MIN_LAT || sitelat>MAX_LAT || sitelon<MIN_LON || sitelon>MAX_LON) {
 			// set error condition and return
@@ -232,29 +232,29 @@ public class Mrms {
     	}
 
     	if (RQIfile!=null) {
-    		System.out.println("Reading RQI file " + RQIfile);
-    		RQIdata=new MrmsData(rootDirectory + File.separator + yyyyMM + File.separator + RQIfile,MrmsData.FLOAT_TYPE, MIN_LAT,MIN_LON, CELL_SIZE);
+    		//System.out.println("Reading RQI file " + RQIfile);
+    		RQIdata=new MrmsData(rootDirectory + File.separator + yyyyMM + File.separator + RQIfile,MrmsData.FLOAT_TYPE, MIN_LAT,MIN_LON, CELL_SIZE, tmpDir);
     	}
     	else {
  			throw new Exception("Missing RQI file");	
 		}
     	if (HCFfile!=null) {
-    		System.out.println("Reading HCF file " + HCFfile);
-    		HCFdata=new MrmsData(rootDirectory + File.separator + yyyyMM + File.separator + HCFfile,MrmsData.FLOAT_TYPE, MIN_LAT,MIN_LON, CELL_SIZE);
+    		//System.out.println("Reading HCF file " + HCFfile);
+    		HCFdata=new MrmsData(rootDirectory + File.separator + yyyyMM + File.separator + HCFfile,MrmsData.FLOAT_TYPE, MIN_LAT,MIN_LON, CELL_SIZE, tmpDir);
     	}
     	else {
  			throw new Exception("Missing HCF file");	
 		}
     	if (PRECIPRATEfile!=null) {
-    		System.out.println("Reading PRECIPRATE file " + PRECIPRATEfile);
-    		PRECIPRATEdata=new MrmsData(rootDirectory + File.separator + yyyyMM + File.separator + PRECIPRATEfile,MrmsData.FLOAT_TYPE, MIN_LAT,MIN_LON, CELL_SIZE);
+    		//System.out.println("Reading PRECIPRATE file " + PRECIPRATEfile);
+    		PRECIPRATEdata=new MrmsData(rootDirectory + File.separator + yyyyMM + File.separator + PRECIPRATEfile,MrmsData.FLOAT_TYPE, MIN_LAT,MIN_LON, CELL_SIZE, tmpDir);
     	}
     	else {
  			throw new Exception("Missing PRECIPRATE file");	
 		}
     	if (MASKfile!=null) {
-    		System.out.println("Reading MASK file " + MASKfile);
-    		MASKdata=new MrmsData(rootDirectory + File.separator + yyyyMM + File.separator + MASKfile,MrmsData.INT_TYPE, MIN_LAT,MIN_LON, CELL_SIZE);
+    		//System.out.println("Reading MASK file " + MASKfile);
+    		MASKdata=new MrmsData(rootDirectory + File.separator + yyyyMM + File.separator + MASKfile,MrmsData.INT_TYPE, MIN_LAT,MIN_LON, CELL_SIZE, tmpDir);
     	}
     	else {
  			throw new Exception("Missing MASK file");	

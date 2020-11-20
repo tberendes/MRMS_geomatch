@@ -52,12 +52,12 @@ public class MrmsData {
 	float [][] floatData;
 	int [][] intData;
 	// startLat and startLon is inconsistent in the data, assume same fixed domain and hardcode
-	public MrmsData(String fn, int type, float sLat, float sLon, float cSize) throws IOException {
+	public MrmsData(String fn, int type, float sLat, float sLon, float cSize, String tmpDir) throws IOException {
 		String filename=fn;
 		TempFile temp=null;
 		try {
 			if (filename.endsWith(".gz")) {
-				temp = new TempFile(fn);
+				temp = new TempFile(fn,tmpDir);
 				filename = temp.getTempFilename();
 //				System.out.println("temporary file: "+ filename);
 				temp.unzip();
@@ -124,11 +124,11 @@ public class MrmsData {
 				System.out.println("Error, unknown data type ");
 				throw new IOException("Error, unknown data type ");
 			}
-			System.out.println("nrows "+nrows);
-			System.out.println("ncols "+ncols);
-			System.out.println("startLat "+startLat);
-			System.out.println("startLon "+startLon);
-			System.out.println("cellsize "+cellSize);
+			//System.out.println("nrows "+nrows);
+			//System.out.println("ncols "+ncols);
+			//System.out.println("startLat "+startLat);
+			//System.out.println("startLon "+startLon);
+			//System.out.println("cellsize "+cellSize);
 			int lineCnt=0;
 			while ((currentLine = br.readLine()) != null)
 			{
