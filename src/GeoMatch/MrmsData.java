@@ -48,6 +48,10 @@ public class MrmsData {
 	public ByteBuffer getBinarySiteValues() {
 		return binarySiteValues;
 	}
+	ByteBuffer binaryFpMap = null;
+	public ByteBuffer getBinaryFpMap() {
+		return binaryFpMap;
+	}
 
 	float [][] floatData;
 	int [][] intData;
@@ -129,6 +133,17 @@ public class MrmsData {
 			//System.out.println("startLat "+startLat);
 			//System.out.println("startLon "+startLon);
 			//System.out.println("cellsize "+cellSize);
+//from file:
+//			ncols 7000
+//			nrows 3500
+//			xllcenter -129.995000
+//			yllcenter 20.005000
+//			cellsize 0.010000
+//			NODATA_value -999
+//			-999.00 -999.00 -999.00 -999.00 -999.00 -999.00 -999.00 -999.00 
+// NOTE that the data is in descending latitude (i.e. UL to LL on map) order in the MRMS ASCII files
+//   i.e. image display line order.  We switch to ascending latitude in order to more easily compute
+//   lat and lon using startLat and startLon
 			int lineCnt=0;
 			while ((currentLine = br.readLine()) != null)
 			{
@@ -262,7 +277,8 @@ public class MrmsData {
 				
 		return image;
 	}
-	public BufferedImage matchGPMToImage(float min, float max, float centerlat, float centerlon, float siteRadiusKm,ArrayList<LatLng> gpmLatLon, float fpRadiusKm,ArrayList<Float> sfcPrecipRate, boolean colorFlag,boolean binaryDataFlag)
+	public BufferedImage matchGPMToImage(float min, float max, float centerlat, float centerlon, float siteRadiusKm,ArrayList<LatLng> gpmLatLon, 
+			float fpRadiusKm,ArrayList<Float> sfcPrecipRate, boolean colorFlag,boolean binaryDataFlag,boolean fpFlag)
 	/*
 	 * creates grey scale image 0-255 between specified max/min values
 	 */
@@ -282,6 +298,8 @@ public class MrmsData {
 		imageBounds = siteBounds;
 		
 		float [][] binaryLines=null;
+		float [][] binaryFpLines=null;
+		
 		if (binaryDataFlag) {
 			binarySiteValues=ByteBuffer.allocate(numLines*numPix*Float.BYTES+5*Float.BYTES);
 			binarySiteValues.putFloat((float)numPix);		
@@ -290,6 +308,16 @@ public class MrmsData {
 			binarySiteValues.putFloat((float)getLon(startLine));
 			binarySiteValues.putFloat(cellSize);
 			binaryLines = new float[numLines][numPix];
+		}
+			
+		if (fpFlag) {
+			binaryFpMap=ByteBuffer.allocate(numLines*numPix*Integer.BYTES+5*Float.BYTES);
+			binaryFpMap.putFloat((float)numPix);		
+			binaryFpMap.putFloat((float)numLines);		
+			binaryFpMap.putFloat((float)getLat(startPix));
+			binaryFpMap.putFloat((float)getLon(startLine));
+			binaryFpMap.putFloat(cellSize);
+			binaryFpLines = new float[numLines][numPix];
 		}
 
 		byte [][] allLines;
@@ -302,8 +330,12 @@ public class MrmsData {
 		// create blank image
 		for (int ind1=0;ind1<numLines;ind1++){
 			for (int ind2=0;ind2<numPix;ind2++){
-				if (binaryDataFlag)
+				if (binaryDataFlag) {
 					binaryLines[ind1][ind2] = -9999.0f;
+				}
+				if (fpFlag) {
+					binaryFpLines[ind1][ind2] = -9999.0f;					
+				}
 				if (colorFlag) {
 					allLines[ind1][ind2*3] = 0;
 					allLines[ind1][ind2*3+1] = 0;
@@ -348,8 +380,12 @@ public class MrmsData {
 						else {
 							allLines[ind1 - startLine][ind2 - startPix] = byteValue;
 						}
-						if (binaryDataFlag)
+						if (binaryDataFlag) {
 							binaryLines[ind1 - startLine][ind2 - startPix] = value;
+						}
+						if (fpFlag) {
+							binaryFpLines[ind1 - startLine][ind2 - startPix] = footprintIndex;
+						}
 					}
 //					else {
 //						allLines[ind1 - startLine][ind2 - startPix] = (byte)255;
@@ -367,6 +403,11 @@ public class MrmsData {
 			if (binaryLines!=null) {
 				for (int pixInd=0,ind2=startPix;ind2<=endPix;ind2++,pixInd++){
 					binarySiteValues.putFloat(binaryLines[lineInd][pixInd]);					
+				}
+			}
+			if (binaryFpLines!=null) {
+				for (int pixInd=0,ind2=startPix;ind2<=endPix;ind2++,pixInd++){
+					binaryFpMap.putFloat(binaryFpLines[lineInd][pixInd]);					
 				}
 			}
 			// draw one line at a time into bufferedImage
@@ -544,6 +585,70 @@ public class MrmsData {
 		}
 //		System.out.println( pixcnt+ "x" + linecnt + ": " + values.size() + " in " + tooFar +" out");
 		return values;
+	}
+	public static BufferedImage bytebufferToImage(ByteBuffer buffer, float min, float max, float centerlat, float centerlon, float siteRadiusKm, boolean colorFlag)
+	/*
+	 * creates grey scale image 0-255 between specified max/min values
+	 */
+	{
+		
+//		BufferedImage image = new BufferedImage(ncols, nrows, BufferedImage.TYPE_BYTE_GRAY);
+		
+		// read header from bytebuffer
+		// rewind buffer
+		buffer.rewind();
+		int numPix = (int)(buffer.getFloat());		
+		int numLines = (int)(buffer.getFloat());		
+		int startPix = (int)(buffer.getFloat());		
+		int startLine = (int)(buffer.getFloat());	
+		float cellSize = buffer.getFloat();
+		
+		byte [][] allLines;
+		if (colorFlag) {
+			allLines = new byte[numLines][numPix*3];
+		}
+		else {
+			allLines = new byte[numLines][numPix];
+		}
+
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		for (int ind1=0;ind1<numLines;ind1++){
+			for (int ind2=0;ind2<numPix;ind2++){
+				float value = buffer.getFloat();
+				byte byteValue;
+				if (value<min) byteValue = 0;
+				else if (value>max) byteValue = (byte)255;
+				else byteValue=(byte) (255.0 * ( value - min) / (max - min));
+				if (colorFlag) {
+					int index=0xFF&byteValue;
+					allLines[ind1][ind2*3] = colormap.radarScale[index][0];
+					allLines[ind1][ind2*3+1] = colormap.radarScale[index][1];
+					allLines[ind1][ind2*3+2] = colormap.radarScale[index][2];
+				}
+				else {
+					allLines[ind1][ind2] = byteValue;
+				}
+			}
+			
+		}
+		// write image, flip line order for top to bottom image rendering
+		for (int ind1=0;ind1<numLines;ind1++){
+			
+			// draw one line at a time into bufferedImage
+			if (colorFlag)
+				bos.write(allLines[numLines - 1 - ind1], 0, numPix*3);
+			else
+				bos.write(allLines[numLines - 1 - ind1], 0, numPix);;
+		}
+		byte[] pixels = bos.toByteArray();
+		
+		BufferedImage image;
+		if (colorFlag)
+			image = createRGBImage(pixels, numPix, numLines);
+		else 
+			image = createGreyscaleImage(pixels, numPix, numLines);
+				
+		return image;
 	}
 		
 	public class BoundingBox

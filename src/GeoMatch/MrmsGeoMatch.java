@@ -637,7 +637,7 @@ public class MrmsGeoMatch {
 			mrmsfoutBinary.write(mrmsBinary.array());
 			mrmsfoutBinary.close();
 						
-			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 175.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,true,true);
+			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 175.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,true,true,true);
 			gpmfout = new FileOutputStream(vnOutputFilename + ".gpm.col" + ".png" );
 		    ImageIO.write(gpmimage, "png", gpmfout);
 			gpmfout.close();
@@ -648,6 +648,22 @@ public class MrmsGeoMatch {
 			gpmfoutBinary = new FileOutputStream(vnOutputFilename + ".gpm" + ".bin" );	
 			gpmfoutBinary.write(gpmBinary.array());
 			gpmfoutBinary.close();	
+
+			// added GPM footprint index binary file to tie back to original GPM footprint in database
+			gpmBinary = mrms.getPRECIPRATEdata().getBinaryFpMap();
+			gpmfoutBinary = new FileOutputStream(vnOutputFilename + ".fp" + ".bin" );	
+			gpmfoutBinary.write(gpmBinary.array());
+			gpmfoutBinary.close();	
+
+			// write out image of fp index for testing
+			//BufferedImage fpimage = gpmLatLon.size()
+//			gpmimage = MrmsData.bytebufferToImage(mrms.getPRECIPRATEdata().getBinaryFpMap(), 0.0f, (float)(gpmLatLon.size()), siteLat, siteLon, 175.0f, true);
+//			gpmfout = new FileOutputStream(vnOutputFilename + ".fp.col" + ".png" );
+//		    ImageIO.write(gpmimage, "png", gpmfout);
+//			gpmfout.close();
+//			imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
+//			outputKMLFile(imageBounds,vnOutputFilename + ".fp.col" + ".png", vnOutputFilename + ".fp.col" + ".kml");
+//
 			
 			mrmsimage = mrms.getPRECIPRATEdata().floatDataToImage(0.0f,60.0f, siteLat, siteLon, 175.0f,false,false);
 			mrmsfout = new FileOutputStream(vnOutputFilename + ".mrms.bw" + ".png" );
@@ -656,7 +672,7 @@ public class MrmsGeoMatch {
 			imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
 			outputKMLFile(imageBounds,vnOutputFilename + ".mrms.bw" + ".png", vnOutputFilename + ".mrms.bw" + ".kml");
 
-			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 175.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,false,false);
+			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 175.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,false,false,false);
 			gpmfout = new FileOutputStream(vnOutputFilename + ".gpm.bw" + ".png" );
 		    ImageIO.write(gpmimage, "png", gpmfout);
 			gpmfout.close();
