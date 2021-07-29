@@ -110,9 +110,14 @@ public class MrmsGeoMatch {
 		}
 		else {
 			// testing only, remove these three lines and uncomment above block
-			vnInputDir = "C:\\Users\\tberendes\\gpmgv\\input_dir";
-			vnOutputDir = "C:\\Users\\tberendes\\gpmgv\\output_dir";
-			mrmsPath = "C:\\Users\\tberendes\\gpmgv\\MRMS\\level2";
+//			vnInputDir = "C:\\Users\\tberendes\\gpmgv\\input_dir";
+//			vnOutputDir = "C:\\Users\\tberendes\\gpmgv\\output_dir";
+//			mrmsPath = "C:\\Users\\tberendes\\gpmgv\\MRMS\\level2";
+			
+			vnInputDir = "C:\\Users\\tberendes\\vm_data\\capri_test_data\\test";
+			vnOutputDir = "C:\\Users\\tberendes\\vm_data\\capri_test_data\\test_out";
+			mrmsPath = "C:\\Users\\tberendes\\vm_data\\capri_test_data\\MRMS\\level2\\GPM";
+
 		}
 
 		if (vnInputDir.equals(vnOutputDir)) {
@@ -149,8 +154,10 @@ public class MrmsGeoMatch {
 		
 	//		String vnInputFilename = "C:\\Users\\tberendes\\gpmgv\\GPM_matchups\\GRtoDPR.KHTX.160626.13215.ITE114.DPR.NS.1_21.15dbzGRDPR_newDm.nc.gz";
 	//		String vnOutputFilename = "C:\\Users\\tberendes\\gpmgv\\GPM_matchups\\GRtoDPR.KHTX.160626.13215.ITE114.DPR.NS.1_21.15dbzGRDPR_newDm_mrms.nc";
-			String vnInputFilename = "C:\\Users\\tberendes\\gpmgv\\MRMS\\GRtoDPR.KDOX.140907.2977.V05A.DPR.NS.1_21.nc.gz";
-			String vnOutputFilename = "C:\\Users\\tberendes\\gpmgv\\MRMS\\GRtoDPR.KDOX.140907.2977.V05A.DPR.NS.1_21_mrms.nc.gz";
+//			String vnInputFilename = "C:\\Users\\tberendes\\gpmgv\\MRMS\\GRtoDPR.KDOX.140907.2977.V05A.DPR.NS.1_21.nc.gz";
+//			String vnOutputFilename = "C:\\Users\\tberendes\\gpmgv\\MRMS\\GRtoDPR.KDOX.140907.2977.V05A.DPR.NS.1_21_mrms.nc.gz";
+			String vnInputFilename = "C:\\Users\\tberendes\\vm_data\\capri_test_data\\test\\GRtoDPR.KABR.200312.34295.V06A.DPR.NS.1_21.nc.gz";
+			String vnOutputFilename = "C:\\Users\\tberendes\\vm_data\\capri_test_data\\test_out\\GRtoDPR.KABR.200312.34295.V06A.DPR.NS.1_21.nc.gz";
 			mrmsGeo.processFile(vnInputFilename, vnOutputFilename);
 		}
 		

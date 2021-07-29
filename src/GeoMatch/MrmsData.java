@@ -227,8 +227,8 @@ public class MrmsData {
 			binarySiteValues=ByteBuffer.allocate(numLines*numPix*Float.BYTES+5*Float.BYTES);
 			binarySiteValues.putFloat((float)numPix);		
 			binarySiteValues.putFloat((float)numLines);		
-			binarySiteValues.putFloat((float)getLat(startPix));
-			binarySiteValues.putFloat((float)getLon(startLine));
+			binarySiteValues.putFloat((float)getLat(startLine));
+			binarySiteValues.putFloat((float)getLon(startPix));
 			binarySiteValues.putFloat(cellSize);
 		}
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -304,8 +304,8 @@ public class MrmsData {
 			binarySiteValues=ByteBuffer.allocate(numLines*numPix*Float.BYTES+5*Float.BYTES);
 			binarySiteValues.putFloat((float)numPix);		
 			binarySiteValues.putFloat((float)numLines);		
-			binarySiteValues.putFloat((float)getLat(startPix));
-			binarySiteValues.putFloat((float)getLon(startLine));
+			binarySiteValues.putFloat((float)getLat(startLine));
+			binarySiteValues.putFloat((float)getLon(startPix));
 			binarySiteValues.putFloat(cellSize);
 			binaryLines = new float[numLines][numPix];
 		}
@@ -314,8 +314,8 @@ public class MrmsData {
 			binaryFpMap=ByteBuffer.allocate(numLines*numPix*Integer.BYTES+5*Float.BYTES);
 			binaryFpMap.putFloat((float)numPix);		
 			binaryFpMap.putFloat((float)numLines);		
-			binaryFpMap.putFloat((float)getLat(startPix));
-			binaryFpMap.putFloat((float)getLon(startLine));
+			binaryFpMap.putFloat((float)getLat(startLine));
+			binaryFpMap.putFloat((float)getLon(startPix));
 			binaryFpMap.putFloat(cellSize);
 			binaryFpLines = new float[numLines][numPix];
 		}
