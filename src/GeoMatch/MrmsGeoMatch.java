@@ -632,35 +632,35 @@ public class MrmsGeoMatch {
 		FileOutputStream gpmfoutBinary = null;
 		try {
 			// originally had site radius of 125km, changed to 175 to make image size > 256 for deep learning (allows crop to 256)
-			mrmsimage = mrms.getPRECIPRATEdata().floatDataToImage(0.0f,60.0f, siteLat, siteLon, 175.0f,true,true);
-			mrmsfout = new FileOutputStream(vnOutputFilename + ".mrms.col" + ".png" );
-		    ImageIO.write(mrmsimage, "png", mrmsfout);
-			mrmsfout.close();
-			BoundingBox imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
-			outputKMLFile(imageBounds,vnOutputFilename + ".mrms.col" + ".png", vnOutputFilename + ".mrms.col" + ".kml");
+//			mrmsimage = mrms.getPRECIPRATEdata().floatDataToImage(0.0f,60.0f, siteLat, siteLon, 175.0f,true,true);
+//			mrmsfout = new FileOutputStream(vnOutputFilename + ".mrms.col" + ".png" );
+//		    ImageIO.write(mrmsimage, "png", mrmsfout);
+//			mrmsfout.close();
+//			BoundingBox imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
+//			outputKMLFile(imageBounds,vnOutputFilename + ".mrms.col" + ".png", vnOutputFilename + ".mrms.col" + ".kml");
 
 			ByteBuffer mrmsBinary = mrms.getPRECIPRATEdata().getBinarySiteValues();
 			mrmsfoutBinary = new FileOutputStream(vnOutputFilename + ".mrms" + ".bin" );	
 			mrmsfoutBinary.write(mrmsBinary.array());
 			mrmsfoutBinary.close();
 						
-			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 175.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,true,true,true);
-			gpmfout = new FileOutputStream(vnOutputFilename + ".gpm.col" + ".png" );
-		    ImageIO.write(gpmimage, "png", gpmfout);
-			gpmfout.close();
-			imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
-			outputKMLFile(imageBounds,vnOutputFilename + ".gpm.col" + ".png", vnOutputFilename + ".gpm.col" + ".kml");
+//			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 175.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,true,true,true);
+//			gpmfout = new FileOutputStream(vnOutputFilename + ".gpm.col" + ".png" );
+//		    ImageIO.write(gpmimage, "png", gpmfout);
+//			gpmfout.close();
+//			imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
+//			outputKMLFile(imageBounds,vnOutputFilename + ".gpm.col" + ".png", vnOutputFilename + ".gpm.col" + ".kml");
 
 			ByteBuffer gpmBinary = mrms.getPRECIPRATEdata().getBinarySiteValues();
 			gpmfoutBinary = new FileOutputStream(vnOutputFilename + ".gpm" + ".bin" );	
 			gpmfoutBinary.write(gpmBinary.array());
 			gpmfoutBinary.close();	
 
-			// added GPM footprint index binary file to tie back to original GPM footprint in database
-			gpmBinary = mrms.getPRECIPRATEdata().getBinaryFpMap();
-			gpmfoutBinary = new FileOutputStream(vnOutputFilename + ".fp" + ".bin" );	
-			gpmfoutBinary.write(gpmBinary.array());
-			gpmfoutBinary.close();	
+//			// added GPM footprint index binary file to tie back to original GPM footprint in database
+//			gpmBinary = mrms.getPRECIPRATEdata().getBinaryFpMap();
+//			gpmfoutBinary = new FileOutputStream(vnOutputFilename + ".fp" + ".bin" );	
+//			gpmfoutBinary.write(gpmBinary.array());
+//			gpmfoutBinary.close();	
 
 			// write out image of fp index for testing
 			//BufferedImage fpimage = gpmLatLon.size()
@@ -672,19 +672,19 @@ public class MrmsGeoMatch {
 //			outputKMLFile(imageBounds,vnOutputFilename + ".fp.col" + ".png", vnOutputFilename + ".fp.col" + ".kml");
 //
 			
-			mrmsimage = mrms.getPRECIPRATEdata().floatDataToImage(0.0f,60.0f, siteLat, siteLon, 175.0f,false,false);
-			mrmsfout = new FileOutputStream(vnOutputFilename + ".mrms.bw" + ".png" );
-		    ImageIO.write(mrmsimage, "png", mrmsfout);
-			mrmsfout.close();
-			imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
-			outputKMLFile(imageBounds,vnOutputFilename + ".mrms.bw" + ".png", vnOutputFilename + ".mrms.bw" + ".kml");
-
-			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 175.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,false,false,false);
-			gpmfout = new FileOutputStream(vnOutputFilename + ".gpm.bw" + ".png" );
-		    ImageIO.write(gpmimage, "png", gpmfout);
-			gpmfout.close();
-			imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
-			outputKMLFile(imageBounds,vnOutputFilename + ".gpm.bw" + ".png", vnOutputFilename + ".gpm.bw" + ".kml");
+//			mrmsimage = mrms.getPRECIPRATEdata().floatDataToImage(0.0f,60.0f, siteLat, siteLon, 175.0f,false,false);
+//			mrmsfout = new FileOutputStream(vnOutputFilename + ".mrms.bw" + ".png" );
+//		    ImageIO.write(mrmsimage, "png", mrmsfout);
+//			mrmsfout.close();
+//			imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
+//			outputKMLFile(imageBounds,vnOutputFilename + ".mrms.bw" + ".png", vnOutputFilename + ".mrms.bw" + ".kml");
+//
+//			gpmimage = mrms.getPRECIPRATEdata().matchGPMToImage(0.0f,60.0f, siteLat, siteLon, 175.0f, gpmLatLon, (float)(DPR_FOOTPRINT)/2.0f,sfcPrecipRate,false,false,false);
+//			gpmfout = new FileOutputStream(vnOutputFilename + ".gpm.bw" + ".png" );
+//		    ImageIO.write(gpmimage, "png", gpmfout);
+//			gpmfout.close();
+//			imageBounds = mrms.getPRECIPRATEdata().getImageBounds();
+//			outputKMLFile(imageBounds,vnOutputFilename + ".gpm.bw" + ".png", vnOutputFilename + ".gpm.bw" + ".kml");
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
